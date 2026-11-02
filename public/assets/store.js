@@ -39,12 +39,11 @@ export async function loadPublic() {
   }
 }
 export async function status() {
-  if (DEMO) return { db: true, claimed: true, authed: true };
+  if (DEMO) return { db: true, authed: true };
   try { return await api('status'); }
   catch (e) { if (e.status === 503) return { db: false }; throw e; }
 }
-export const setup = (code, password) => post('setup', { code, password });
-export const login = (password) => post('login', { password });
+export const login = (username, password) => post('login', { username, password });
 export const logout = () => (DEMO ? Promise.resolve() : post('logout'));
 export const changePassword = (current, next) => post('password', { current, next });
 

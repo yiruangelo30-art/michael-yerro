@@ -719,17 +719,12 @@ export async function renderStudio(root, route) {
         h('p', {}, 'The site is online, but its database is not connected. In Cloudflare, open this Pages project, add a D1 database binding named DB, then deploy again.')));
       return;
     }
-    if (!st.claimed) {
-      const o = { code: '', password: '' };
-      clear(root).append(gate('Set up Chef Studio', 'Enter the setup code you were given, then choose the password Michael will use.', [
-        field('Setup code', input(o, 'code', { required: true, autocomplete: 'off' })),
-        field('New password', input(o, 'password', { type: 'password', required: true, minlength: 8, autocomplete: 'new-password' }), 'At least 8 characters. There is no email reset, so keep it safe.'),
-      ], 'Create password', () => store.setup(o.code, o.password)));
-      return;
-    }
     if (!st.authed) {
-      const o = { password: '' };
-      clear(root).append(gate('Chef Studio', 'Log in to manage recipes, costs and the portfolio.', [field('Password', input(o, 'password', { type: 'password', required: true, autocomplete: 'current-password' }))], 'Log in', () => store.login(o.password)));
+      const o = { username: '', password: '' };
+      clear(root).append(gate('Chef Studio', 'Log in to manage recipes, costs and the portfolio.', [
+        field('Username', input(o, 'username', { required: true, autocomplete: 'username', autocapitalize: 'none' })),
+        field('Password', input(o, 'password', { type: 'password', required: true, autocomplete: 'current-password' })),
+      ], 'Log in', () => store.login(o.username, o.password)));
       return;
     }
     authed = true;

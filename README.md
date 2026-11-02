@@ -11,9 +11,9 @@ Stack: static files in `public/`, Cloudflare Pages Functions in `functions/`, Cl
 3. Storage & Databases > D1 > Create a database named `michael-yerro`.
 4. In the Pages project: Settings > Bindings > Add > D1 database. Variable name `DB`, database `michael-yerro`.
 5. Deployments > Retry deployment.
-6. Open `/#studio`, enter the setup code and choose a password.
+6. Open `/#studio` and log in with username `michael`. Change the password in Account.
 
-Tables are created on first use. The setup code works once and only its hash is stored here.
+Tables are created on first use. Only a salted password hash is stored here.
 
 ## Local preview page
 

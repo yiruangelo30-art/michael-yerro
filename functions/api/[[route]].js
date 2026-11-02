@@ -2,8 +2,10 @@
 import { liveSeed } from '../../public/assets/seed.js';
 import { toPublic } from '../../public/assets/publicview.js';
 
-// SHA-256 of the one-time setup code. Only the hash lives in the code.
-const SETUP_CODE_HASH = 'e6cce422d2ff66948dbceaa2068a574214bbce77fe4aa7cc966ff4fae9f103bb';
+// First login. Only a salted hash lives here; Michael changes the password in Account.
+const USERNAME = 'michael';
+const FIRST_SALT = '170d12dcab57df821350db7e1810ea99';
+const FIRST_HASH = 'f5dcd36056f3dfe8651203ccd37c5d86bd115b80972bae759ea034caf1e81f62';
 const KINDS = ['profile', 'settings', 'ingredient', 'recipe', 'setmenu', 'photo'];
 const MIMES = ['image/webp', 'image/jpeg', 'image/png'];
 const MAX_IMG = 1900000;
@@ -48,7 +50,10 @@ async function ensureDb(env) {
     const claim = await env.DB.prepare("INSERT OR IGNORE INTO kv (k, v) VALUES ('seeded', '1')").run();
     if (claim.meta.changes) {
       const seed = liveSeed();
-      const stmts = [];
+      const stmts = [
+        env.DB.prepare("INSERT OR IGNORE INTO kv (k, v) VALUES ('pw_salt', ?)").bind(FIRST_SALT),
+        env.DB.prepare("INSERT OR IGNORE INTO kv (k, v) VALUES ('pw_hash', ?)").bind(FIRST_HASH),
+      ];
       for (const kind of KINDS) for (const doc of seed[kind] || []) stmts.push(putDocStmt(env, kind, doc));
       await env.DB.batch(stmts);
     }
@@ -107,34 +112,21 @@ export async function onRequest({ request, env, params }) {
     }
 
     if (m === 'GET' && a === 'status') {
-      const claimed = !!(await getKv(env, 'pw_hash'));
-      return json({ db: true, claimed, authed: claimed && await isAuthed(request, env) });
-    }
-
-    if (m === 'POST' && a === 'setup') {
-      if (await getKv(env, 'pw_hash')) return err('This site already has a password. Log in instead.', 409);
-      const { code, password } = await body(request);
-      if (await sha256(String(code || '').trim().toUpperCase()) !== SETUP_CODE_HASH) return err('That setup code is not correct.', 403);
-      if (String(password || '').length < 8) return err('Use at least 8 characters for the password.');
-      const { salt, hash } = await hashPassword(password);
-      await setKv(env, 'pw_salt', salt);
-      await setKv(env, 'pw_hash', hash);
-      return json({ ok: true }, 200, { 'set-cookie': await newSession(env) });
+      return json({ db: true, authed: await isAuthed(request, env) });
     }
 
     if (m === 'POST' && a === 'login') {
       const until = Number(await getKv(env, 'lock_until')) || 0;
       if (until > Date.now()) return err('Too many wrong passwords. Try again in 15 minutes.', 429);
-      const { password } = await body(request);
+      const { username, password } = await body(request);
       const salt = await getKv(env, 'pw_salt');
       const stored = await getKv(env, 'pw_hash');
-      if (!stored) return err('Set a password first.', 409);
       const { hash } = await hashPassword(String(password || ''), salt);
-      if (hash !== stored) {
+      if (String(username || '').trim().toLowerCase() !== USERNAME || hash !== stored) {
         const fails = (Number(await getKv(env, 'fails')) || 0) + 1;
         await setKv(env, 'fails', fails >= 8 ? 0 : fails);
         if (fails >= 8) await setKv(env, 'lock_until', Date.now() + 15 * 60000);
-        return err('That password is not correct.', 401);
+        return err('That username or password is not correct.', 401);
       }
       await setKv(env, 'fails', 0);
       return json({ ok: true }, 200, { 'set-cookie': await newSession(env) });
