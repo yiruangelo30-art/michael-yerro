@@ -18,3 +18,7 @@ Tables are created on first use. Only a salted password hash is stored here.
 ## Local preview page
 
 `node tools/build-preview.mjs out.html` builds a single-file preview with sample content (needs esbuild).
+
+## Sample photos
+
+Photos in `public/assets/samples/` are free stock images from Unsplash used as placeholders. They are not Michael's work. Replace them with his own photos.

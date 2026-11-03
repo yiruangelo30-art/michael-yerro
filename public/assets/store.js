@@ -3,7 +3,7 @@ import { SEED, previewSeed } from './seed.js';
 import { toPublic } from './publicview.js';
 
 const DEMO = !!window.__PREVIEW;
-const KEY = 'chef-preview-v1';
+const KEY = 'chef-preview-v2';
 const KINDS = ['profile', 'settings', 'ingredient', 'recipe', 'setmenu', 'photo'];
 export const isPreview = DEMO;
 
@@ -14,7 +14,7 @@ function demoLoad() {
   if (docs) return;
   try { const raw = localStorage.getItem(KEY); if (raw) docs = JSON.parse(raw); } catch { /* ignore */ }
   if (!docs) docs = previewSeed();
-  docs.photo = (docs.photo || []).filter((p) => p.art);
+  docs.photo = (docs.photo || []).filter((p) => p.url);
 }
 
 async function api(path, opts = {}) {
@@ -28,7 +28,10 @@ const post = (path, body) => api(path, { method: 'POST', headers: { 'content-typ
 
 export const uid = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`).replace(/[^a-zA-Z0-9-]/g, '');
 
-export const imgUrl = (id) => (demoImages.get(id) || `/api/img/${id}`);
+export const imgUrl = (id) => {
+  if (String(id).startsWith('/assets/')) return (window.__SAMPLES && window.__SAMPLES[id]) || id;
+  return demoImages.get(id) || `/api/img/${id}`;
+};
 
 export async function loadPublic() {
   if (DEMO) { demoLoad(); return toPublic(docs); }
@@ -106,7 +109,7 @@ export async function deleteImage(id) {
 
 export async function makeBackup(onStep) {
   const images = [];
-  const ids = docs.photo.filter((p) => !p.art).map((p) => p.id);
+  const ids = docs.photo.filter((p) => !p.url).map((p) => p.id);
   const portrait = docs.profile[0]?.portrait;
   if (portrait && !ids.includes(portrait)) ids.push(portrait);
   for (let i = 0; i < ids.length; i += 1) {

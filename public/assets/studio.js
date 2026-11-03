@@ -1,6 +1,7 @@
 // Chef Studio: the private side. Nothing here is visible to visitors.
 import { h, clear, money, pct, toast, modal, confirmBox, downloadJson, printNode } from './ui.js';
 import * as store from './store.js';
+import { icon, profileBlock } from './site.js';
 import { UNIT_NAMES, buildCtx, pricing, unitCost, explode, shoppingList, setMenuCalc, UNITS } from './calc.js';
 
 const COURSES = ['Starter', 'Soup', 'Salad', 'Main', 'Dessert', 'Bakery', 'Sauce', 'Drink'];
@@ -9,8 +10,9 @@ const DIETARY = ['Halal', 'Vegetarian', 'Vegan', 'Gluten-free', 'Dairy-free', 'N
 const STATUS = { idea: 'Idea', testing: 'Testing', final: 'Final' };
 const PHOTO_CATS = ['Dishes', 'Events', 'Kitchen', 'Team'];
 const NAV = [
-  ['studio', 'Overview'], ['s-recipes', 'Recipes'], ['s-lab', 'Recipe lab'], ['s-ingredients', 'Ingredients'],
-  ['s-menus', 'Set menus'], ['s-costing', 'Costing'], ['s-photos', 'Photos'], ['s-profile', 'Profile'], ['s-account', 'Account'],
+  ['My kitchen', [['studio', 'Overview', 'home'], ['s-recipes', 'Recipes', 'dish'], ['s-lab', 'Recipe lab', 'heart'], ['s-ingredients', 'Ingredients', 'menu']]],
+  ['Tools', [['s-menus', 'Set menus', 'menu'], ['s-costing', 'Costing', 'dish'], ['s-photos', 'Photos', 'photo']]],
+  ['Account', [['s-profile', 'Profile', 'chef'], ['s-account', 'Settings', 'lock']]],
 ];
 
 let authed = false;
@@ -77,7 +79,7 @@ function overview() {
   const over = costed.filter((x) => x.p.over);
   const samples = d.recipe.filter((r) => r.sample).length + d.ingredient.filter((i) => i.sample).length + d.setmenu.filter((m) => m.sample).length;
   const shownReal = real.filter((r) => r.published && r.kind !== 'base');
-  const realPhotos = d.photo.filter((p) => !p.art && p.published);
+  const realPhotos = d.photo.filter((p) => !p.sample && p.published);
   const steps = [
     [shownReal.length >= 6, `Publish at least 6 of your own dishes (${shownReal.length} so far)`, '#s-recipes'],
     [shownReal.every((r) => (r.photos || []).length) && shownReal.length > 0, 'Add a photo to every published dish', '#s-recipes'],
@@ -219,7 +221,7 @@ function recipeEditor(id) {
       isBase && Number(r.yieldQty) > 0 && [`Cost per ${r.yieldUnit === 'pc' ? 'piece' : (UNITS[r.yieldUnit]?.f === 'vol' ? 'litre' : 'kg')}`, money2(p.batch / (Number(r.yieldQty) * (UNITS[r.yieldUnit]?.b || 1)) * (UNITS[r.yieldUnit]?.f === 'count' ? 1 : 1000)), true],
       !isBase && [`Suggested price at ${p.target}%`, money2(p.suggested)],
     ].filter(Boolean);
-    summary.replaceChildren(
+    summary.replaceChildren(...[
       h('dl', { class: 'calc' }, rows.map(([a, b, strong]) => h('div', { class: strong ? 'strong' : '' }, h('dt', {}, a), h('dd', {}, b)))),
       !isBase && p.price ? h('div', { class: `verdict ${p.over ? 'bad' : 'good'}` },
         h('div', {}, h('strong', {}, pct(p.fc)), h('span', {}, `food cost, target ${p.target}%`)),
@@ -227,7 +229,7 @@ function recipeEditor(id) {
       !isBase && p.price ? h('small', { class: 'muted' }, `${c.s.pricesIncludeVat ? `Price includes ${c.s.vatPct}% VAT. Net ${money2(p.net)}.` : 'Price excludes VAT.'}`) : null,
       p.warnings.length ? h('ul', { class: 'warns' }, p.warnings.map((w) => h('li', {}, w))) : null,
       p.allergens.length ? h('p', { class: 'muted' }, `Contains: ${[...new Set([...p.allergens, ...r.allergens])].join(', ')}`) : null,
-    );
+    ].filter(Boolean));
     mini.textContent = isBase ? `Batch ${money2(p.batch)}` : `${money2(p.cost)} per portion${p.price ? `, ${pct(p.fc)}` : ''}`;
     const factor = guests / (Number(r.servings) || 1);
     const list = shoppingList(explode(r, factor, c));
@@ -390,7 +392,8 @@ function recipeEditor(id) {
             toggle(r, 'published', 'Show this dish on the portfolio', touch),
             toggle(r, 'showRecipe', 'Also show ingredients and method', touch),
             toggle(r, 'showCost', 'Also show price and food cost %', touch),
-            h('small', { class: 'muted' }, 'Quantities and costs stay private until you tick these.'),
+            toggle(r, 'sample', 'Show the Sample label', touch),
+            h('small', { class: 'muted' }, 'Quantities and costs stay private until you tick these. Untick Sample once this is a real dish.'),
           ]))),
     bar);
 }
@@ -524,7 +527,7 @@ function menuEditor(id) {
             field('Guests', input(m, 'guests', { type: 'number', min: 1, step: 1, inputmode: 'numeric' }, refresh)),
             field(`Price per guest, ${cur()}`, input(m, 'price', { type: 'number', step: 'any', min: 0, inputmode: 'decimal', placeholder: 'Suggested' }, refresh))),
           field('Target food cost %', input(m, 'targetFc', { type: 'number', step: 'any', min: 1, inputmode: 'decimal', placeholder: String(ctx().s.targetFc) }, refresh)), out),
-        h('section', { class: 'panel stack' }, h('h2', {}, 'Portfolio'), toggle(m, 'published', 'Show this menu on the portfolio'), toggle(m, 'showPrice', 'Also show the price per guest'),
+        h('section', { class: 'panel stack' }, h('h2', {}, 'Portfolio'), toggle(m, 'published', 'Show this menu on the portfolio'), toggle(m, 'showPrice', 'Also show the price per guest'), toggle(m, 'sample', 'Show the Sample label'),
           h('button', { class: 'btn', onclick: () => guard(() => store.put('setmenu', clone(m)), 'Set menu saved') }, 'Save set menu'),
           h('button', { class: 'btn danger', onclick: async () => { if (await confirmBox(`Delete ${m.name}?`)) { await guard(() => store.del('setmenu', m.id), 'Set menu deleted'); go('s-menus'); } } }, 'Delete set menu')))));
 }
@@ -578,7 +581,7 @@ function photos() {
   const paint = () => {
     const list = [...D().photo].reverse();
     grid.replaceChildren(...(list.length ? list.map((p) => h('button', { class: 'pa', onclick: () => edit(p) },
-      p.art ? h('span', { class: 'ph' }, 'Sample') : h('img', { src: store.imgUrl(p.id), alt: p.caption || 'Photo', loading: 'lazy' }),
+      h('img', { src: store.imgUrl(p.url || p.id), alt: p.caption || 'Photo', loading: 'lazy' }),
       h('small', {}, p.caption || 'No caption', p.published ? '' : ' (hidden)'))) : [h('p', { class: 'muted' }, 'No photos yet. Add your best plated dishes first.')]));
   };
   const edit = async (p) => {
@@ -589,16 +592,17 @@ function photos() {
     },
     field('Caption', input(o, 'caption')),
     field('Category', select(o, 'category', PHOTO_CATS)),
-    toggle(o, 'published', 'Show in the gallery'),
+    toggle(o, 'published', 'Show in the gallery'), toggle(o, 'sample', 'Show the Sample label'),
     h('div', { class: 'row end' },
       h('button', {
         type: 'button', class: 'btn danger',
         onclick: async () => {
           if (await confirmBox('Delete this photo? It will also be removed from any dish that uses it.')) {
             await guard(async () => {
-              if (!p.art) await store.deleteImage(p.id);
+              if (!p.url) await store.deleteImage(p.id);
               await store.del('photo', p.id);
-              for (const r of D().recipe.filter((x) => (x.photos || []).includes(p.id))) { r.photos = r.photos.filter((i) => i !== p.id); await store.put('recipe', r); }
+              const ref = p.url || p.id;
+              for (const r of D().recipe.filter((x) => (x.photos || []).includes(ref))) { r.photos = r.photos.filter((i) => i !== ref); await store.put('recipe', r); }
             }, 'Photo deleted');
             done(); paint();
           }
@@ -749,10 +753,12 @@ export async function renderStudio(root, route) {
   else page = overview();
 
   const active = route === 'studio' ? 'studio' : section === 'recipe' ? 's-recipes' : section === 'menu' ? 's-menus' : `s-${section}`;
-  clear(root).append(h('div', { class: 'studio' },
-    h('aside', { class: 'snav' }, h('a', { class: 'brand', href: '#home' }, 'View portfolio'),
-      h('nav', { 'aria-label': 'Studio' }, NAV.map(([r, t]) => h('a', { href: `#${r}`, class: r === active ? 'on' : '' }, t)))),
-    h('main', { class: 'smain' }, store.isPreview && h('p', { class: 'preview-note' }, 'Preview with sample content. Your changes stay in this browser.'), page)));
+  clear(root).append(h('div', { class: 'layout' },
+    h('aside', { class: 'app-side' }, profileBlock(D().profile[0] || {}, 'Chef Studio'),
+      h('nav', { class: 'navlist', 'aria-label': 'Studio' }, NAV.map(([g, items]) => [h('div', { class: 'navlabel' }, g),
+        items.map(([r, t, ic]) => h('a', { href: `#${r}`, class: r === active ? 'active' : '', 'aria-current': r === active ? 'page' : null }, icon(ic), t))])),
+      h('a', { class: 'side-login', href: '#home' }, icon('home'), 'View portfolio')),
+    h('div', { class: 'app-main' }, h('main', { class: 'smain' }, store.isPreview && h('p', { class: 'preview-note' }, 'Preview with sample content. Your changes stay in this browser.'), page))));
   window.scrollTo(0, 0);
 }
 

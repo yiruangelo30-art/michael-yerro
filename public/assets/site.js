@@ -15,43 +15,27 @@ function cover(d, cls = 'cover') {
 }
 
 function dishCard(d) {
-  return h('a', { class: 'dish', href: `#dish-${d.id}` }, cover(d),
-    h('span', { class: 'dish-meta' }, h('i', {}, `${mark(d.course)} ${d.course || 'Dish'}`), d.favourite && h('i', { class: 'fav' }, 'Chef’s favourite'), sampleTag(d)),
-    h('strong', {}, cleanName(d.name)),
-    d.story && h('span', { class: 'dish-story' }, d.story.length > 110 ? `${d.story.slice(0, 110).trim()}…` : d.story),
-    h('span', { class: 'more' }, 'View dish'));
+  return h('a', { class: 'card rcard', href: `#dish-${d.id}` },
+    h('span', { class: 'rthumb' }, cover(d, 'rthumb-in'),
+      d.favourite && h('span', { class: 'fav', title: 'Chef’s favourite' }, '♥'),
+      h('span', { class: 'badge' }, `${mark(d.course)} ${d.course || 'Dish'}`),
+      d.sample && h('span', { class: 'sample at' }, 'Sample')),
+    h('span', { class: 'rbody' }, h('strong', {}, cleanName(d.name)),
+      d.story && h('span', { class: 'rstory' }, d.story.length > 92 ? `${d.story.slice(0, 92).trim()}…` : d.story),
+      h('span', { class: 'kv' }, d.cuisine && h('span', {}, d.cuisine), (d.dietary || []).slice(0, 2).map((x) => h('span', {}, x)))));
 }
 
 function dishGrid(dishes) {
   const courses = [...new Set(dishes.map((d) => d.course).filter(Boolean))];
   let filter = 'All';
-  const grid = h('div', { class: 'dishes' });
-  const bar = h('div', { class: 'filters', role: 'group', 'aria-label': 'Filter by course' });
+  const grid = h('div', { class: 'grid r' });
+  const bar = h('div', { class: 'chips', role: 'group', 'aria-label': 'Filter by course' });
   const paint = () => {
     grid.replaceChildren(...ordered(dishes).filter((d) => filter === 'All' || d.course === filter).map(dishCard));
     bar.replaceChildren(...['All', ...courses].map((c) => h('button', { class: c === filter ? 'on' : '', 'aria-pressed': String(c === filter), onclick: () => { filter = c; paint(); } }, c)));
   };
   paint();
   return h('div', {}, courses.length > 1 ? bar : null, grid);
-}
-
-function slider(dishes) {
-  let i = 0;
-  const stage = h('div', { class: 'slide' });
-  const count = h('span', { class: 'count' });
-  const pad = (n) => String(n).padStart(2, '0');
-  const paint = () => {
-    const d = dishes[i];
-    stage.replaceChildren(cover(d, 'slide-img'), h('div', { class: 'slide-text' },
-      h('i', {}, `${mark(d.course)} ${d.course || 'Dish'}`, d.cuisine ? `, ${d.cuisine}` : ''), sampleTag(d),
-      h('h3', {}, h('a', { href: `#dish-${d.id}` }, cleanName(d.name))),
-      d.story && h('p', {}, d.story)));
-    count.textContent = `${pad(i + 1)} / ${pad(dishes.length)}`;
-  };
-  paint();
-  const go = (n) => { i = (i + n + dishes.length) % dishes.length; paint(); };
-  return h('div', {}, stage, dishes.length > 1 && h('div', { class: 'slide-nav' },
-    h('button', { 'aria-label': 'Previous dish', onclick: () => go(-1) }, '‹'), count, h('button', { 'aria-label': 'Next dish', onclick: () => go(1) }, '›')));
 }
 
 const contactLinks = (p) => [
@@ -61,31 +45,40 @@ const contactLinks = (p) => [
   p.location && ['Based in', p.location, null],
 ].filter(Boolean);
 
+function dishOfTheDay(dishes) {
+  const list = ordered(dishes).filter((d) => d.favourite);
+  const from = list.length ? list : dishes;
+  const day = Math.floor(Date.now() / 864e5);
+  const d = from[day % from.length];
+  return h('a', { class: 'feature', href: `#dish-${d.id}` }, cover(d, 'feature-img'),
+    h('span', { class: 'feature-text' }, h('span', { class: 'feature-tag' }, '✦ Dish of the day'), d.sample && h('span', { class: 'sample' }, 'Sample'),
+      h('strong', {}, cleanName(d.name)), h('span', { class: 'rule' }), d.story && h('span', { class: 'rstory' }, d.story),
+      h('span', { class: 'kv' }, d.course && h('span', {}, d.course), d.cuisine && h('span', {}, d.cuisine))));
+}
+
 function home(pub) {
   const { profile: p, dishes, setMenus, photos } = pub;
   const favs = ordered(dishes).filter((d) => d.favourite);
-  const tiles = [
-    dishes.length && ['#dishes', '◆', 'Dishes', `${dishes.length} ${dishes.length === 1 ? 'dish' : 'dishes'} and how they came to be`],
-    setMenus.length && ['#menus', '✦', 'Set menus', 'Courses planned for private dining and events'],
-    ['#chef', '◇', 'The chef', 'Career, training and what he teaches'],
-  ].filter(Boolean);
-  return h('main', {},
-    h('section', { class: 'hero wrap' },
-      h('div', { class: 'hero-text' },
-        h('p', { class: 'hero-title' }, p.title),
-        h('h1', {}, p.name),
-        h('p', { class: 'lede' }, p.tagline),
-        h('div', { class: 'row' }, h('a', { class: 'btn', href: dishes.length ? '#dishes' : '#chef' }, dishes.length ? 'View dishes' : 'Read his story'), h('a', { class: 'btn ghost', href: '#contact' }, 'Contact Michael'))),
-      h('div', { class: 'medal' }, h('img', { src: portraitOf(p), alt: `Portrait of ${p.name}`, width: 640, height: 640 }))),
-    h('section', { class: 'wrap tiles' }, tiles.map(([href, m, a, b]) => h('a', { href, class: 'tile' }, h('i', {}, m), h('strong', {}, a), h('span', {}, b)))),
-    favs.length ? h('section', { class: 'band' }, h('div', { class: 'wrap' }, h('h2', {}, 'Chef’s favourites'), slider(favs))) : null,
-    dishes.length ? h('section', { class: 'wrap sec' }, h('h2', {}, 'Dishes'), dishGrid(dishes.slice(0, 6)), dishes.length > 6 && h('a', { class: 'more', href: '#dishes' }, 'See all dishes')) : null,
-    photos.length ? h('section', { class: 'wrap sec' }, h('h2', {}, 'From the kitchen'), photoGrid(photos.slice(0, 6))) : null);
+  return h('div', {},
+    h('div', { class: 'welcome' },
+      h('div', { class: 'welcome-banner' }, h('div', { class: 'eyebrow' }, 'CHEF PORTFOLIO'), h('h2', {}, `Welcome to ${p.name.split(' ')[0]}’s kitchen`), h('p', {}, p.tagline)),
+      h('div', { class: 'stats' }, [['Dishes', dishes.length, '#dishes'], ['Set menus', setMenus.length, '#menus'], ['Favourites', favs.length, '#favourites'], ['Photos', photos.length, '#gallery']]
+        .map(([a, b, href]) => h('a', { class: 'stat', href }, h('b', {}, b), h('span', {}, a))))),
+    dishes.length ? dishOfTheDay(dishes) : h('div', { class: 'empty' }, 'New dishes are being photographed. Please check back soon.'),
+    favs.length ? h('section', {}, h('h2', { class: 'sub' }, 'Chef’s favourites'), h('div', { class: 'grid r' }, favs.slice(0, 4).map(dishCard))) : null,
+    photos.length ? h('section', {}, h('h2', { class: 'sub' }, 'From the kitchen'), photoGrid(photos.slice(0, 6))) : null);
 }
 
+function favouritesPage(pub) {
+  const favs = ordered(pub.dishes).filter((d) => d.favourite);
+  return h('div', {}, head('Chef’s favourites', 'The dishes he is proudest to serve.'), favs.length ? h('div', { class: 'grid r' }, favs.map(dishCard)) : h('div', { class: 'empty' }, 'Favourites will appear here.'));
+}
+
+const head = (title, text) => h('div', { class: 'section-head' }, h('h1', {}, title), text && h('p', {}, text));
+
 function dishesPage(pub) {
-  return h('main', { class: 'wrap sec' }, h('h1', { class: 'page' }, 'Dishes'),
-    pub.dishes.length ? dishGrid(pub.dishes) : h('p', { class: 'empty' }, 'New dishes are being photographed. Please check back soon.'));
+  return h('div', {}, head('Dishes', 'Open any dish to see its story and details.'),
+    pub.dishes.length ? dishGrid(pub.dishes) : h('div', { class: 'empty' }, 'New dishes are being photographed. Please check back soon.'));
 }
 
 function scaler(d, list) {
@@ -105,7 +98,7 @@ function scaler(d, list) {
 
 function dishPage(pub, id) {
   const d = pub.dishes.find((x) => x.id === id);
-  if (!d) return h('main', { class: 'wrap sec' }, h('p', { class: 'empty' }, 'This dish is not available.'), h('a', { class: 'more', href: '#dishes' }, 'See all dishes'));
+  if (!d) return h('div', {}, h('p', { class: 'empty' }, 'This dish is not available.'), h('a', { class: 'more', href: '#dishes' }, 'See all dishes'));
   const lines = h('ul', { class: 'ings' });
   const facts = [
     d.cuisine && ['Style', d.cuisine],
@@ -114,7 +107,7 @@ function dishPage(pub, id) {
     d.price && ['Menu price', money(d.price, pub.currency, 0)],
     d.fc && ['Food cost', pct(d.fc)],
   ].filter(Boolean);
-  return h('main', { class: 'wrap sec dish-page' },
+  return h('div', { class: 'dish-page' },
     h('a', { class: 'back-link', href: '#dishes' }, 'All dishes'),
     h('div', { class: 'dish-top' },
       h('div', { class: 'dish-photos' }, cover(d, 'dish-hero'), d.photos?.length > 1 && h('div', { class: 'thumbs' }, d.photos.slice(1).map((id2) => h('img', { src: imgUrl(id2), alt: cleanName(d.name), loading: 'lazy' })))),
@@ -130,7 +123,7 @@ function dishPage(pub, id) {
 }
 
 function menusPage(pub) {
-  return h('main', { class: 'wrap sec' }, h('h1', { class: 'page' }, 'Set menus'),
+  return h('div', {}, head('Set menus', 'Courses planned for private dining and events.'),
     pub.setMenus.length ? h('div', { class: 'menus' }, pub.setMenus.map((m) => h('article', { class: 'menu' },
       sampleTag(m), h('h2', {}, m.name.replace(/^Sample:\s*/, '')), m.occasion && h('i', {}, m.occasion),
       h('ol', {}, m.courses.map((c) => h('li', {}, h('small', {}, c.course), c.dishId ? h('a', { href: `#dish-${c.dishId}` }, cleanName(c.name)) : cleanName(c.name), c.note && h('em', {}, c.note)))),
@@ -148,7 +141,7 @@ function lightbox(items, start) {
   const key = (e) => { if (e.key === 'Escape') close(); if (e.key === 'ArrowLeft') go(-1); if (e.key === 'ArrowRight') go(1); };
   const paint = () => {
     const p = items[i];
-    img.replaceChildren(p.art ? plateArt(p.id, p.caption) : h('img', { src: imgUrl(p.id), alt: p.caption || 'Photo' }));
+    img.replaceChildren(h('img', { src: imgUrl(p.id), alt: p.caption || 'Photo' }));
     cap.textContent = p.caption || '';
   };
   const lb = h('div', { class: 'lightbox', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Photo viewer', onclick: (e) => { if (e.target === lb) close(); } },
@@ -162,20 +155,20 @@ function lightbox(items, start) {
 
 function photoGrid(photos) {
   return h('div', { class: 'photos' }, photos.map((p, i) => h('button', { 'aria-label': `Open ${p.caption || 'photo'}`, onclick: () => lightbox(photos, i) },
-    p.art ? plateArt(p.id, p.caption) : h('img', { src: imgUrl(p.id), alt: p.caption || 'Photo', loading: 'lazy' }), p.sample && h('span', { class: 'sample' }, 'Sample'))));
+    h('img', { src: imgUrl(p.id), alt: p.caption || 'Photo', loading: 'lazy' }), p.sample && h('span', { class: 'sample' }, 'Sample'))));
 }
 
 function galleryPage(pub) {
   const cats = [...new Set(pub.photos.map((p) => p.category).filter(Boolean))];
   let f = 'All';
   const box = h('div', {});
-  const bar = h('div', { class: 'filters', role: 'group', 'aria-label': 'Filter photos' });
+  const bar = h('div', { class: 'chips', role: 'group', 'aria-label': 'Filter photos' });
   const paint = () => {
     box.replaceChildren(photoGrid(pub.photos.filter((p) => f === 'All' || p.category === f)));
     bar.replaceChildren(...['All', ...cats].map((c) => h('button', { class: c === f ? 'on' : '', 'aria-pressed': String(c === f), onclick: () => { f = c; paint(); } }, c)));
   };
   paint();
-  return h('main', { class: 'wrap sec' }, h('h1', { class: 'page' }, 'Gallery'), pub.photos.length ? [cats.length > 1 ? bar : null, box] : h('p', { class: 'empty' }, 'Photos are on their way.'));
+  return h('div', {}, head('Gallery'), pub.photos.length ? [cats.length > 1 ? bar : null, box] : h('p', { class: 'empty' }, 'Photos are on their way.'));
 }
 
 function cvNode(p) {
@@ -192,7 +185,7 @@ function cvNode(p) {
 function chefPage(pub) {
   const p = pub.profile;
   const list = (title, items) => (items?.length ? h('div', {}, h('h3', {}, title), h('ul', { class: 'plain' }, items.map((x) => h('li', {}, x)))) : null);
-  return h('main', { class: 'wrap sec' },
+  return h('div', {},
     h('div', { class: 'chef-top' },
       h('div', { class: 'medal small' }, h('img', { src: portraitOf(p), alt: `Portrait of ${p.name}` })),
       h('div', {}, h('h1', { class: 'page' }, p.name), h('p', { class: 'hero-title' }, p.title), h('p', { class: 'lede' }, p.tagline),
@@ -205,22 +198,59 @@ function chefPage(pub) {
 
 function contactPage(pub) {
   const p = pub.profile;
-  return h('main', { class: 'wrap sec contact' }, h('h1', { class: 'page' }, 'Contact'), h('p', { class: 'lede' }, `Available for exclusive chef and kitchen management roles. Write to ${p.name.split(' ')[0]} directly.`),
+  return h('div', { class: 'contact' }, head('Contact'), h('p', { class: 'lede' }, `Available for exclusive chef and kitchen management roles. Write to ${p.name.split(' ')[0]} directly.`),
     h('dl', { class: 'facts big' }, contactLinks(p).map(([a, b, href]) => h('div', {}, h('dt', {}, a), h('dd', {}, href ? h('a', { href, target: href.startsWith('http') ? '_blank' : null, rel: 'noopener' }, b) : b)))));
 }
 
+const ICON = {
+  home: '<path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/>',
+  dish: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/>',
+  heart: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+  menu: '<path d="M6 3h12v18H6zM9 8h6M9 12h6M9 16h4"/>',
+  photo: '<path d="M3 6h18v13H3z"/><circle cx="9" cy="11" r="2"/><path d="M3 17l5-4 4 3 4-5 5 5"/>',
+  chef: '<path d="M7 14a4 4 0 1 1 1.5-7.7A4.5 4.5 0 0 1 17 7a3.6 3.6 0 0 1-.5 7v5h-9.5z"/>',
+  mail: '<path d="M3 6h18v12H3z"/><path d="M3 7l9 7 9-7"/>',
+  lock: '<path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3"/>',
+};
+export const icon = (name) => {
+  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  s.setAttribute('viewBox', '0 0 24 24');
+  s.setAttribute('aria-hidden', 'true');
+  s.innerHTML = ICON[name] || ICON.dish;
+  return h('span', { class: 'ic' }, s);
+};
+export const hatSvg = () => {
+  const w = document.createElement('span');
+  w.className = 'hat';
+  w.innerHTML = '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 40a13 13 0 1 1 5-25 12 12 0 0 1 20 1 12 12 0 0 1 3 24v12H18z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M18 44h28M26 40v-9M38 40v-9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+  return w;
+};
+export const profileBlock = (p, tag) => h('div', { class: 'profile' },
+  h('img', { class: 'avatar', src: portraitOf(p), alt: `Portrait of ${p.name}` }),
+  h('div', {}, h('h3', {}, p.name), h('p', {}, tag || p.title)));
+
 function chrome(pub, route, content) {
-  const nav = [['#dishes', 'Dishes', pub.dishes.length], ['#menus', 'Set menus', pub.setMenus.length], ['#gallery', 'Gallery', pub.photos.length], ['#chef', 'The chef', 1], ['#contact', 'Contact', 1]].filter((n) => n[2]);
-  const links = h('nav', { class: 'nav', 'aria-label': 'Main' }, nav.map(([href, t]) => h('a', { href, class: `#${route}` === href ? 'on' : '' }, t)));
-  const toggle = h('button', { class: 'menu-btn', 'aria-label': 'Menu', 'aria-expanded': 'false', onclick: () => { const o = links.classList.toggle('open'); toggle.setAttribute('aria-expanded', String(o)); } }, 'Menu');
-  return [
-    h('header', { class: 'top' }, h('div', { class: 'wrap top-in' }, h('a', { class: 'brand', href: '#home' }, pub.profile.name), toggle, links)),
-    content,
-    h('footer', { class: 'foot' }, h('div', { class: 'wrap foot-in' },
-      h('div', {}, h('strong', {}, pub.profile.name), h('p', {}, pub.profile.title)),
-      h('div', {}, contactLinks(pub.profile).filter((c) => c[2]).map(([a, b, href]) => h('a', { href, target: href.startsWith('http') ? '_blank' : null, rel: 'noopener' }, a))),
-      h('a', { href: '#studio', class: 'studio-link' }, 'Chef login'))),
+  const name = route.split('-')[0];
+  const active = name === 'dish' ? 'dishes' : (route === 'home' ? 'home' : name);
+  const groups = [
+    ['Explore', [['home', 'Home', 'home', 1], ['dishes', 'Dishes', 'dish', pub.dishes.length], ['favourites', 'Favourites', 'heart', pub.dishes.some((d) => d.favourite)], ['menus', 'Set menus', 'menu', pub.setMenus.length], ['gallery', 'Gallery', 'photo', pub.photos.length]]],
+    ['The chef', [['chef', 'Career', 'chef', 1], ['contact', 'Contact', 'mail', 1]]],
   ];
+  const link = ([r, t, ic]) => h('a', { href: `#${r}`, class: r === active ? 'active' : '', 'aria-current': r === active ? 'page' : null }, icon(ic), t);
+  const p = pub.profile;
+  return [h('div', { class: 'layout' },
+    h('aside', { class: 'app-side' }, profileBlock(p),
+      h('nav', { class: 'navlist', 'aria-label': 'Main' }, groups.map(([g, items]) => [h('div', { class: 'navlabel' }, g), items.filter((i) => i[3]).map(link)])),
+      h('a', { class: 'side-login', href: '#studio' }, icon('lock'), 'Chef login')),
+    h('div', { class: 'app-main' },
+      h('header', { class: 'mast' },
+        h('div', {}, h('div', { class: 'eyebrow' }, 'EXCLUSIVE CHEF  ·  RESTAURANT MANAGER'),
+          h('div', { class: 'wordline' }, h('span', { class: 'wordmark' }, 'Chef Michael'), hatSvg()),
+          h('p', {}, p.name)),
+        h('div', { class: 'mast-tools' }, h('a', { class: 'pill', href: '#contact' }, 'Contact'),
+          !isPreview && h('a', { class: 'pill', href: '#chef' }, 'View CV'))),
+      h('main', { class: 'content' }, content),
+      h('footer', { class: 'foot' }, `${p.name}  ·  ${p.title}`)))];
 }
 
 export function renderSite(root, pub, route) {
@@ -228,6 +258,7 @@ export function renderSite(root, pub, route) {
   let page;
   if (name === 'dish') page = dishPage(pub, rest.join('-'));
   else if (name === 'dishes') page = dishesPage(pub);
+  else if (name === 'favourites') page = favouritesPage(pub);
   else if (name === 'menus') page = menusPage(pub);
   else if (name === 'gallery') page = galleryPage(pub);
   else if (name === 'chef') page = chefPage(pub);

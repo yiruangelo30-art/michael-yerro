@@ -31,7 +31,7 @@ export function toPublic(docs) {
     return o;
   });
   const photos = (docs.photo || []).filter((p) => p.published).map((p) => ({
-    id: p.id, caption: p.caption || '', category: p.category || '', art: !!p.art, sample: !!p.sample,
+    id: p.url || p.id, caption: p.caption || '', category: p.category || '', sample: !!p.sample,
   }));
   return { profile, currency: ctx.s.currency, dishes, setMenus, photos };
 }

@@ -1,5 +1,5 @@
 // Every request under /api/* is handled here.
-import { liveSeed } from '../../public/assets/seed.js';
+import { liveSeed, SEED_VERSION } from '../../public/assets/seed.js';
 import { toPublic } from '../../public/assets/publicview.js';
 
 // First login. Only a salted hash lives here; Michael changes the password in Account.
@@ -55,6 +55,18 @@ async function ensureDb(env) {
         env.DB.prepare("INSERT OR IGNORE INTO kv (k, v) VALUES ('pw_hash', ?)").bind(FIRST_HASH),
       ];
       for (const kind of KINDS) for (const doc of seed[kind] || []) stmts.push(putDocStmt(env, kind, doc));
+      await env.DB.batch(stmts);
+    }
+  }
+  // A newer set of sample content replaces the old samples. Real work is never touched.
+  if (Number(await getKv(env, 'seed_v')) < SEED_VERSION) {
+    const claim = await env.DB.prepare("INSERT INTO kv (k, v) VALUES ('seed_v', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v WHERE CAST(kv.v AS INTEGER) < ?").bind(String(SEED_VERSION), SEED_VERSION).run();
+    if (claim.meta.changes) {
+      const seed = liveSeed();
+      const { results } = await env.DB.prepare('SELECT kind, id, data FROM docs').all();
+      const stmts = [];
+      for (const r of results) if (JSON.parse(r.data).sample) stmts.push(env.DB.prepare('DELETE FROM docs WHERE kind = ? AND id = ?').bind(r.kind, r.id));
+      for (const kind of ['ingredient', 'recipe', 'setmenu', 'photo']) for (const doc of seed[kind] || []) stmts.push(putDocStmt(env, kind, doc));
       await env.DB.batch(stmts);
     }
   }
