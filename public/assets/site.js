@@ -1,6 +1,7 @@
 // The public portfolio: what employers and guests see.
 import { h, plateArt, mark, money, pct, printNode } from './ui.js';
 import { imgUrl, isPreview } from './store.js';
+import { animatePage } from './motion.js';
 
 const PORTRAIT = window.__PORTRAIT || '/assets/michael.jpg';
 const portraitOf = (p) => (p.portrait ? imgUrl(p.portrait) : PORTRAIT);
@@ -50,7 +51,7 @@ function dishOfTheDay(dishes) {
   const from = list.length ? list : dishes;
   const day = Math.floor(Date.now() / 864e5);
   const d = from[day % from.length];
-  return h('a', { class: 'feature', href: `#dish-${d.id}` }, cover(d, 'feature-img'),
+  return h('a', { class: 'feature', href: `#dish-${d.id}` }, h('span', { class: 'feature-pic' }, cover(d, 'feature-img'), h('span', { class: 'steam', 'aria-hidden': 'true' }, h('i'), h('i'), h('i'))),
     h('span', { class: 'feature-text' }, h('span', { class: 'feature-tag' }, '✦ Dish of the day'), d.sample && h('span', { class: 'sample' }, 'Sample'),
       h('strong', {}, cleanName(d.name)), h('span', { class: 'rule' }), d.story && h('span', { class: 'rstory' }, d.story),
       h('span', { class: 'kv' }, d.course && h('span', {}, d.course), d.cuisine && h('span', {}, d.cuisine))));
@@ -61,7 +62,7 @@ function home(pub) {
   const favs = ordered(dishes).filter((d) => d.favourite);
   return h('div', {},
     h('div', { class: 'welcome' },
-      h('div', { class: 'welcome-banner' }, h('div', { class: 'eyebrow' }, 'CHEF PORTFOLIO'), h('h2', {}, `Welcome to ${p.name.split(' ')[0]}’s kitchen`), h('p', {}, p.tagline)),
+      h('div', { class: 'welcome-banner' }, h('canvas', { class: 'spices', 'aria-hidden': 'true' }), h('div', { class: 'eyebrow' }, 'CHEF PORTFOLIO'), h('h2', {}, `Welcome to ${p.name.split(' ')[0]}’s kitchen`), h('p', {}, p.tagline)),
       h('div', { class: 'stats' }, [['Dishes', dishes.length, '#dishes'], ['Set menus', setMenus.length, '#menus'], ['Favourites', favs.length, '#favourites'], ['Photos', photos.length, '#gallery']]
         .map(([a, b, href]) => h('a', { class: 'stat', href }, h('b', {}, b), h('span', {}, a))))),
     dishes.length ? dishOfTheDay(dishes) : h('div', { class: 'empty' }, 'New dishes are being photographed. Please check back soon.'),
@@ -222,7 +223,7 @@ export const icon = (name) => {
 export const hatSvg = () => {
   const w = document.createElement('span');
   w.className = 'hat';
-  w.innerHTML = '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 40a13 13 0 1 1 5-25 12 12 0 0 1 20 1 12 12 0 0 1 3 24v12H18z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M18 44h28M26 40v-9M38 40v-9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+  w.innerHTML = '<i class="wisp"></i><i class="wisp"></i><i class="wisp"></i><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 40a13 13 0 1 1 5-25 12 12 0 0 1 20 1 12 12 0 0 1 3 24v12H18z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M18 44h28M26 40v-9M38 40v-9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
   return w;
 };
 export const profileBlock = (p, tag) => h('div', { class: 'profile' },
@@ -241,15 +242,16 @@ function chrome(pub, route, content) {
   return [h('div', { class: 'layout' },
     h('aside', { class: 'app-side' }, profileBlock(p),
       h('nav', { class: 'navlist', 'aria-label': 'Main' }, groups.map(([g, items]) => [h('div', { class: 'navlabel' }, g), items.filter((i) => i[3]).map(link)])),
+      h('div', { class: 'quote' }),
       h('a', { class: 'side-login', href: '#studio' }, icon('lock'), 'Chef login')),
     h('div', { class: 'app-main' },
-      h('header', { class: 'mast' },
-        h('div', {}, h('div', { class: 'eyebrow' }, 'EXCLUSIVE CHEF  ·  RESTAURANT MANAGER'),
+      h('header', { class: 'mast' }, h('canvas', { class: 'spices', 'aria-hidden': 'true' }),
+        h('div', { class: 'mast-text' }, h('div', { class: 'eyebrow' }, 'EXCLUSIVE CHEF  ·  RESTAURANT MANAGER'),
           h('div', { class: 'wordline' }, h('span', { class: 'wordmark' }, 'Chef Michael'), hatSvg()),
           h('p', {}, p.name)),
         h('div', { class: 'mast-tools' }, h('a', { class: 'pill', href: '#contact' }, 'Contact'),
           !isPreview && h('a', { class: 'pill', href: '#chef' }, 'View CV'))),
-      h('main', { class: 'content' }, content),
+      h('main', { class: 'content enter' }, content),
       h('footer', { class: 'foot' }, `${p.name}  ·  ${p.title}`)))];
 }
 
@@ -265,6 +267,7 @@ export function renderSite(root, pub, route) {
   else if (name === 'contact') page = contactPage(pub);
   else page = home(pub);
   root.replaceChildren(...chrome(pub, route, page));
+  animatePage(root, name === 'home');
   document.title = name === 'dish' ? `${cleanName(pub.dishes.find((d) => d.id === rest.join('-'))?.name || 'Dish')} | ${pub.profile.name}` : `${pub.profile.name} | Exclusive Chef`;
   window.scrollTo(0, 0);
 }

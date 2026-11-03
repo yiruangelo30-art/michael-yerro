@@ -1,5 +1,6 @@
 import * as store from './store.js';
 import { renderSite, hatSvg } from './site.js';
+import { startSpices } from './motion.js';
 import { renderStudio } from './studio.js';
 
 const root = document.getElementById('app');
@@ -16,9 +17,12 @@ function splash() {
   name.textContent = 'CHEF MICHAEL';
   const line = document.createElement('div');
   line.className = 'sline';
-  el.append(hatSvg(), name, line);
+  const canvas = document.createElement('canvas');
+  canvas.className = 'spices';
+  el.append(canvas, hatSvg(), name, line);
   document.body.append(el);
-  setTimeout(() => el.remove(), 1700);
+  startSpices(canvas, { count: 46, mode: 'fall', opacity: 0.8 });
+  setTimeout(() => el.remove(), 2500);
 }
 splash();
 let pub = null;
