@@ -69,45 +69,31 @@ export function startGold(canvas, { count = 60, opacity = 0.8, speed = 1 } = {})
   return stop;
 }
 
-const QUOTES = [
-  'Good food starts with good ingredients.',
-  'A great plate is planned before the fire is lit.',
-  'Taste everything. Twice.',
-  'Consistency is the real signature dish.',
-  'Cook for the guest in front of you.',
-];
-
-function rotateQuotes(el) {
-  if (!el) return;
-  let i = Math.floor(Date.now() / 864e5) % QUOTES.length;
-  el.textContent = QUOTES[i];
-  if (calm()) return;
-  const timer = setInterval(() => {
-    if (!el.isConnected) { clearInterval(timer); return; }
-    el.classList.add('qout');
-    setTimeout(() => { i = (i + 1) % QUOTES.length; el.textContent = QUOTES[i]; el.classList.remove('qout'); }, 900);
-  }, 9000);
+function reveal(root) {
+  const io = new IntersectionObserver((list) => {
+    list.forEach((e) => { if (e.isIntersecting) { e.target.classList.remove('pre'); io.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  root.querySelectorAll('.rv').forEach((el) => { if (el.getBoundingClientRect().top > window.innerHeight * 0.9) { el.classList.add('pre'); io.observe(el); } });
 }
 
-/** The banner image drifts with the pointer and a soft light follows it. */
-function pointerLight(mast) {
-  if (!mast || !window.matchMedia('(pointer: fine)').matches) return;
-  mast.addEventListener('mousemove', (e) => {
-    const r = mast.getBoundingClientRect();
-    const x = (e.clientX - r.left) / r.width; const y = (e.clientY - r.top) / r.height;
-    mast.style.setProperty('--px', `${(x - 0.5) * -12}px`);
-    mast.style.setProperty('--py', `${(y - 0.5) * -8}px`);
-    mast.style.setProperty('--lx', `${x * 100}%`);
-    mast.style.setProperty('--ly', `${y * 100}%`);
-  });
+function navState(root) {
+  const nav = root.querySelector('.f-nav');
+  if (!nav || !root.querySelector('.fine.is-home')) { nav?.classList.add('solid'); return; }
+  const hero = root.querySelector('.f-hero-img');
+  const on = () => {
+    if (!nav.isConnected) { window.removeEventListener('scroll', on); return; }
+    nav.classList.toggle('solid', window.scrollY > 60);
+    if (hero && !calm()) hero.style.translate = `0 ${Math.min(window.scrollY, 900) * 0.18}px`;
+  };
+  window.addEventListener('scroll', on, { passive: true });
+  on();
 }
 
 /** Starts the decorations after a page of the public site renders. */
 export function animatePage(root) {
-  rotateQuotes(root.querySelector('.quote'));
+  navState(root);
   if (calm()) return;
   const small = window.innerWidth < 820;
-  startGold(root.querySelector('.mast canvas'), { count: small ? 34 : 70, opacity: 0.85 });
-  startGold(root.querySelector('.welcome-banner canvas'), { count: small ? 14 : 28, opacity: 0.55, speed: 0.7 });
-  pointerLight(root.querySelector('.mast'));
+  startGold(root.querySelector('.f-hero canvas'), { count: small ? 40 : 90, opacity: 0.8 });
+  reveal(root);
 }

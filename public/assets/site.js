@@ -57,7 +57,7 @@ function dishOfTheDay(dishes) {
       h('span', { class: 'kv' }, d.course && h('span', {}, d.course), d.cuisine && h('span', {}, d.cuisine))));
 }
 
-function home(pub) {
+function homeApp(pub) {
   const { profile: p, dishes, setMenus, photos } = pub;
   const favs = ordered(dishes).filter((d) => d.favourite);
   return h('div', {},
@@ -233,29 +233,69 @@ export const profileBlock = (p, tag) => h('div', { class: 'profile' },
   h('img', { class: 'avatar', src: portraitOf(p), alt: `Portrait of ${p.name}` }),
   h('div', {}, h('h3', {}, p.name), h('p', {}, tag || p.title)));
 
+function fineSplit(items) { return items.slice(0, 3); }
+
+function fineHome(pub) {
+  const { profile: p, dishes, setMenus, photos } = pub;
+  const best = ordered(dishes).filter((d) => d.photos?.length);
+  const menu = setMenus[0];
+  const first = p.experience?.[0];
+  return h('main', { class: 'f-home' },
+    h('section', { class: 'f-hero' },
+      h('img', { class: 'f-hero-img', src: imgUrl('/assets/samples/hero.jpg'), alt: '' }),
+      h('canvas', { class: 'spices', 'aria-hidden': 'true' }),
+      h('div', { class: 'f-hero-text' },
+        h('p', { class: 'f-kicker' }, 'Exclusive Chef'),
+        h('h1', {}, p.name),
+        h('span', { class: 'f-line' }),
+        h('p', { class: 'f-sub' }, 'Private dining and kitchen leadership'),
+        h('a', { class: 'f-btn', href: '#contact' }, 'Enquire')),
+      h('a', { class: 'f-scroll', href: '#about', 'aria-label': 'Scroll to the chef' }, h('span', {}))),
+
+    h('section', { class: 'f-about wrapf', id: 'about-section' },
+      h('div', { class: 'f-portrait rv' }, h('img', { src: portraitOf(p), alt: `Portrait of ${p.name}` })),
+      h('div', { class: 'f-about-text rv' },
+        h('p', { class: 'f-kicker' }, 'The chef'),
+        h('blockquote', {}, p.tagline),
+        first && h('p', { class: 'f-now' }, `${first.role}, ${first.place}, ${first.period}`),
+        h('a', { class: 'f-link', href: '#chef' }, 'Career and training'))),
+
+    best.length ? h('section', { class: 'f-dishes' },
+      h('header', { class: 'f-head rv' }, h('p', { class: 'f-kicker' }, 'Signature dishes'), h('h2', {}, 'From the chef’s table')),
+      fineSplit(best).map((d) => h('a', { class: 'f-dish rv', href: `#dish-${d.id}` },
+        h('span', { class: 'f-dish-img' }, h('img', { src: imgUrl(d.photos[0]), alt: cleanName(d.name), loading: 'lazy' })),
+        h('span', { class: 'f-dish-text' },
+          h('span', { class: 'f-course' }, d.course || 'Dish'), d.sample && h('span', { class: 'f-sample' }, 'Sample'),
+          h('strong', {}, cleanName(d.name)), d.story && h('span', { class: 'f-story' }, d.story), h('span', { class: 'f-link' }, 'View dish')))),
+      h('div', { class: 'f-center' }, h('a', { class: 'f-btn', href: '#dishes' }, `All ${dishes.length} dishes`))) : null,
+
+    menu ? h('section', { class: 'f-menu' },
+      h('div', { class: 'f-card rv' },
+        h('p', { class: 'f-kicker' }, 'Set menu'), menu.sample && h('span', { class: 'f-sample' }, 'Sample'),
+        h('h2', {}, menu.name), menu.occasion && h('p', { class: 'f-occ' }, menu.occasion),
+        h('ol', {}, menu.courses.map((c) => h('li', {}, h('small', {}, c.course), h('span', {}, cleanName(c.name))))),
+        h('a', { class: 'f-link', href: '#menus' }, 'All set menus'))) : null,
+
+    photos.length ? h('section', { class: 'f-gallery wrapf' },
+      h('header', { class: 'f-head rv' }, h('p', { class: 'f-kicker' }, 'Gallery'), h('h2', {}, 'In the kitchen and at the table')),
+      h('div', { class: 'f-mosaic rv' }, photos.slice(0, 5).map((ph, i) => h('button', { class: `m${i}`, 'aria-label': `Open ${ph.caption || 'photo'}`, onclick: () => lightbox(photos, i) },
+        h('img', { src: imgUrl(ph.id), alt: ph.caption || 'Photo', loading: 'lazy' }), ph.sample && h('span', { class: 'f-sample on' }, 'Sample'))))) : null,
+
+    h('section', { class: 'f-cta' }, h('img', { src: imgUrl('/assets/samples/dining-room.jpg'), alt: '', loading: 'lazy' }),
+      h('div', { class: 'rv' }, h('h2', {}, 'Let’s plan your table'), h('p', {}, 'For exclusive chef positions and private dining.'), h('a', { class: 'f-btn', href: '#contact' }, 'Contact Michael'))));
+}
+
 function chrome(pub, route, content) {
-  const name = route.split('-')[0];
-  const active = name === 'dish' ? 'dishes' : (route === 'home' ? 'home' : name);
-  const groups = [
-    ['Explore', [['home', 'Home', 'home', 1], ['dishes', 'Dishes', 'dish', pub.dishes.length], ['favourites', 'Favourites', 'heart', pub.dishes.some((d) => d.favourite)], ['menus', 'Set menus', 'menu', pub.setMenus.length], ['gallery', 'Gallery', 'photo', pub.photos.length]]],
-    ['The chef', [['chef', 'Career', 'chef', 1], ['contact', 'Contact', 'mail', 1]]],
-  ];
-  const link = ([r, t, ic]) => h('a', { href: `#${r}`, class: r === active ? 'active' : '', 'aria-current': r === active ? 'page' : null }, icon(ic), t);
   const p = pub.profile;
-  return [h('div', { class: 'layout' },
-    h('aside', { class: 'app-side' }, profileBlock(p),
-      h('nav', { class: 'navlist', 'aria-label': 'Main' }, groups.map(([g, items]) => [h('div', { class: 'navlabel' }, g), items.filter((i) => i[3]).map(link)])),
-      h('div', { class: 'quote' }),
-      h('a', { class: 'side-login', href: '#studio' }, icon('lock'), 'Chef login')),
-    h('div', { class: 'app-main' },
-      h('header', { class: 'mast' }, h('canvas', { class: 'spices', 'aria-hidden': 'true' }), h('span', { class: 'sheen', 'aria-hidden': 'true' }),
-        h('div', { class: 'mast-text' }, h('div', { class: 'eyebrow' }, 'EXCLUSIVE CHEF  ·  RESTAURANT MANAGER'),
-          h('div', { class: 'wordline' }, h('span', { class: 'wordmark' }, 'Chef Michael'), hatSvg()),
-          h('p', {}, p.name)),
-        h('div', { class: 'mast-tools' }, h('a', { class: 'pill', href: '#contact' }, 'Contact'),
-          !isPreview && h('a', { class: 'pill', href: '#chef' }, 'View CV'))),
-      h('main', { class: 'content enter' }, content),
-      h('footer', { class: 'foot' }, `${p.name}  ·  ${p.title}`)))];
+  const isHome = route === 'home' || route === 'about';
+  const nav = [['dishes', 'Dishes', pub.dishes.length], ['menus', 'Set menus', pub.setMenus.length], ['gallery', 'Gallery', pub.photos.length], ['chef', 'The chef', 1], ['contact', 'Contact', 1]].filter((n) => n[2]);
+  const links = h('nav', { class: 'f-links', 'aria-label': 'Main' }, nav.map(([r, t]) => h('a', { href: `#${r}`, class: route.split('-')[0] === r ? 'on' : '' }, t)));
+  const toggle = h('button', { class: 'f-menu-btn', 'aria-label': 'Menu', 'aria-expanded': 'false', onclick: () => { const o = links.classList.toggle('open'); toggle.setAttribute('aria-expanded', String(o)); } }, 'Menu');
+  return [h('div', { class: `fine${isHome ? ' is-home' : ''}` },
+    h('header', { class: 'f-nav' }, h('a', { class: 'f-brand', href: '#home' }, p.name), toggle, links),
+    isHome ? content : h('main', { class: 'f-page content' }, content),
+    h('footer', { class: 'f-foot' }, h('strong', {}, p.name), h('p', {}, p.title),
+      h('div', { class: 'f-foot-links' }, contactLinks(p).filter((c) => c[2]).map(([a, , href]) => h('a', { href, target: href.startsWith('http') ? '_blank' : null, rel: 'noopener' }, a)), h('a', { href: '#studio' }, 'Chef login'))))];
 }
 
 export function renderSite(root, pub, route) {
@@ -268,10 +308,11 @@ export function renderSite(root, pub, route) {
   else if (name === 'gallery') page = galleryPage(pub);
   else if (name === 'chef') page = chefPage(pub);
   else if (name === 'contact') page = contactPage(pub);
-  else page = home(pub);
+  else page = fineHome(pub);
   root.replaceChildren(...chrome(pub, route, page));
   animatePage(root);
+  if (route === 'about') document.getElementById('about-section')?.scrollIntoView();
   document.title = name === 'dish' ? `${cleanName(pub.dishes.find((d) => d.id === rest.join('-'))?.name || 'Dish')} | ${pub.profile.name}` : `${pub.profile.name} | Exclusive Chef`;
-  window.scrollTo(0, 0);
+  if (route !== 'about') window.scrollTo(0, 0);
 }
 export { cleanName };
