@@ -6,7 +6,7 @@ import { toPublic } from '../../public/assets/publicview.js';
 const USERNAME = 'michael';
 const FIRST_SALT = '170d12dcab57df821350db7e1810ea99';
 const FIRST_HASH = 'f5dcd36056f3dfe8651203ccd37c5d86bd115b80972bae759ea034caf1e81f62';
-const KINDS = ['profile', 'settings', 'ingredient', 'recipe', 'setmenu', 'photo'];
+const KINDS = ['profile', 'settings', 'ingredient', 'recipe', 'setmenu', 'photo', 'sync'];
 const MIMES = ['image/webp', 'image/jpeg', 'image/png'];
 const MAX_IMG = 1900000;
 const SESSION_DAYS = 30;

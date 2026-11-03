@@ -3,8 +3,8 @@ import { SEED, previewSeed } from './seed.js';
 import { toPublic } from './publicview.js';
 
 const DEMO = !!window.__PREVIEW;
-const KEY = 'chef-preview-v2';
-const KINDS = ['profile', 'settings', 'ingredient', 'recipe', 'setmenu', 'photo'];
+const KEY = 'chef-preview-v3';
+const KINDS = ['profile', 'settings', 'ingredient', 'recipe', 'setmenu', 'photo', 'sync'];
 export const isPreview = DEMO;
 
 let docs = null;
@@ -14,6 +14,7 @@ function demoLoad() {
   if (docs) return;
   try { const raw = localStorage.getItem(KEY); if (raw) docs = JSON.parse(raw); } catch { /* ignore */ }
   if (!docs) docs = previewSeed();
+  docs.sync = docs.sync || [];
   docs.photo = (docs.photo || []).filter((p) => p.url);
 }
 

@@ -1,99 +1,27 @@
-// Decorative motion for the public site. Everything here is skipped when the
-// visitor's device asks for reduced motion.
+// Decorative motion for the public site: slow gold dust, light and fine lines.
+// Everything here is skipped when the device asks for reduced motion.
 export const calm = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const sprites = [];
+let glint = null;
 
-function sprite(size, draw) {
-  const c = document.createElement('canvas');
-  c.width = size; c.height = size;
-  const x = c.getContext('2d');
-  x.translate(size / 2, size / 2);
-  x.lineCap = 'round';
-  draw(x, size / 2);
-  return c;
+function makeGlint() {
+  if (glint) return;
+  glint = document.createElement('canvas');
+  glint.width = 32; glint.height = 32;
+  const x = glint.getContext('2d');
+  const g = x.createRadialGradient(16, 16, 0, 16, 16, 16);
+  g.addColorStop(0, 'rgba(255,240,205,1)');
+  g.addColorStop(0.18, 'rgba(232,197,132,.85)');
+  g.addColorStop(0.5, 'rgba(211,173,118,.18)');
+  g.addColorStop(1, 'rgba(211,173,118,0)');
+  x.fillStyle = g;
+  x.fillRect(0, 0, 32, 32);
 }
 
-function buildSprites() {
-  if (sprites.length) return;
-  const leaf = (fill, rib) => (x, r) => {
-    x.rotate(-0.5);
-    x.beginPath(); x.moveTo(-r * 0.9, 0);
-    x.quadraticCurveTo(0, -r * 0.72, r * 0.9, 0);
-    x.quadraticCurveTo(0, r * 0.72, -r * 0.9, 0);
-    x.fillStyle = fill; x.fill();
-    x.strokeStyle = rib; x.lineWidth = r * 0.05;
-    x.beginPath(); x.moveTo(-r * 0.85, 0); x.lineTo(r * 0.8, 0); x.stroke();
-    for (let i = -2; i <= 2; i += 1) {
-      x.beginPath(); x.moveTo(i * r * 0.25, 0); x.lineTo(i * r * 0.25 + r * 0.16, -r * 0.24);
-      x.moveTo(i * r * 0.25, 0); x.lineTo(i * r * 0.25 + r * 0.16, r * 0.24); x.stroke();
-    }
-  };
-  const pepper = (x, r) => {
-    const g = x.createRadialGradient(-r * 0.2, -r * 0.2, r * 0.05, 0, 0, r * 0.5);
-    g.addColorStop(0, '#6b4a2d'); g.addColorStop(1, '#22150c');
-    x.fillStyle = g;
-    x.beginPath(); x.arc(0, 0, r * 0.46, 0, Math.PI * 2); x.fill();
-    x.strokeStyle = '#120b06'; x.lineWidth = r * 0.05;
-    x.beginPath(); x.arc(r * 0.05, 0, r * 0.3, 0.4, 2.4); x.stroke();
-  };
-  const anise = (x, r) => {
-    for (let i = 0; i < 8; i += 1) {
-      x.save(); x.rotate((i * Math.PI) / 4);
-      x.beginPath(); x.moveTo(0, 0);
-      x.quadraticCurveTo(r * 0.3, -r * 0.3, r * 0.92, 0);
-      x.quadraticCurveTo(r * 0.3, r * 0.3, 0, 0);
-      x.fillStyle = '#6a3f20'; x.fill();
-      x.fillStyle = '#c99a5b';
-      x.beginPath(); x.ellipse(r * 0.5, 0, r * 0.13, r * 0.07, 0, 0, Math.PI * 2); x.fill();
-      x.restore();
-    }
-  };
-  const chili = (x, r) => {
-    x.rotate(0.5);
-    x.beginPath(); x.moveTo(-r * 0.62, -r * 0.14);
-    x.quadraticCurveTo(r * 0.2, -r * 0.34, r * 0.9, r * 0.38);
-    x.quadraticCurveTo(r * 0.1, r * 0.22, -r * 0.62, r * 0.14);
-    x.closePath();
-    x.fillStyle = '#b53a27'; x.fill();
-    x.strokeStyle = '#e88a70'; x.lineWidth = r * 0.04;
-    x.beginPath(); x.moveTo(-r * 0.4, -r * 0.1); x.quadraticCurveTo(r * 0.1, -r * 0.16, r * 0.55, r * 0.14); x.stroke();
-    x.strokeStyle = '#6f8b45'; x.lineWidth = r * 0.12;
-    x.beginPath(); x.moveTo(-r * 0.6, 0); x.quadraticCurveTo(-r * 0.8, -r * 0.05, -r * 0.92, -r * 0.3); x.stroke();
-  };
-  const saffron = (x, r) => {
-    x.strokeStyle = '#d9662b'; x.lineWidth = r * 0.07;
-    [[-0.5, -0.6], [0, -0.85], [0.5, -0.55]].forEach(([a, b]) => {
-      x.beginPath(); x.moveTo(0, r * 0.75); x.quadraticCurveTo(a * r * 0.3, 0, a * r, b * r); x.stroke();
-    });
-  };
-  const lemon = (x, r) => {
-    x.fillStyle = '#e4bb45';
-    x.beginPath(); x.arc(0, 0, r * 0.88, 0, Math.PI * 2); x.fill();
-    x.fillStyle = '#f6edc4';
-    x.beginPath(); x.arc(0, 0, r * 0.76, 0, Math.PI * 2); x.fill();
-    for (let i = 0; i < 8; i += 1) {
-      x.save(); x.rotate((i * Math.PI) / 4 + 0.2);
-      x.beginPath(); x.moveTo(r * 0.08, 0);
-      x.lineTo(r * 0.68, -r * 0.23); x.quadraticCurveTo(r * 0.76, 0, r * 0.68, r * 0.23); x.closePath();
-      x.fillStyle = '#eec94f'; x.fill();
-      x.restore();
-    }
-  };
-  sprites.push(
-    sprite(72, leaf('#6f8f47', '#c6d79a')), sprite(72, leaf('#88993f', '#dbe2a8')),
-    sprite(36, pepper), sprite(36, pepper), sprite(36, pepper),
-    sprite(72, anise), sprite(84, chili), sprite(64, saffron), sprite(84, lemon),
-  );
-}
-
-/**
- * Draws herbs and spices on a canvas. "drift" floats them gently in place,
- * "fall" scatters them down the screen for the opening.
- */
-export function startSpices(canvas, { count = 16, mode = 'drift', opacity = 0.5 } = {}) {
+/** Fine gold dust that rises slowly and catches the light. */
+export function startGold(canvas, { count = 60, opacity = 0.8, speed = 1 } = {}) {
   if (calm() || !canvas) return () => {};
-  buildSprites();
+  makeGlint();
   const ctx = canvas.getContext('2d');
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   let w = 0; let h = 0;
@@ -104,14 +32,11 @@ export function startSpices(canvas, { count = 16, mode = 'drift', opacity = 0.5 
   };
   size();
   const rnd = (a, b) => a + Math.random() * (b - a);
-  const fresh = (p = {}, anywhere = true) => Object.assign(p, {
-    s: sprites[Math.floor(Math.random() * sprites.length)],
-    x: rnd(0, w), y: anywhere ? rnd(0, h) : rnd(-90, -30),
-    z: rnd(0.45, 1.15), a: rnd(0, Math.PI * 2),
-    va: rnd(-0.5, 0.5), vx: rnd(-8, 8), vy: mode === 'fall' ? rnd(70, 190) : rnd(-4, 4),
-    ph: rnd(0, Math.PI * 2),
+  const fresh = (p, anywhere) => Object.assign(p, {
+    x: rnd(0, w), y: anywhere ? rnd(0, h) : h + 10, r: rnd(0.7, 2.6) ** 1.6,
+    vy: rnd(-16, -5) * speed, sway: rnd(4, 16), ph: rnd(0, 6.28), tw: rnd(0.6, 2.2),
   });
-  const items = Array.from({ length: count }, () => fresh());
+  const items = Array.from({ length: count }, () => fresh({}, true));
   let last = performance.now();
   let raf = 0;
   let visible = true;
@@ -128,22 +53,16 @@ export function startSpices(canvas, { count = 16, mode = 'drift', opacity = 0.5 
     last = t;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
+    ctx.globalCompositeOperation = 'lighter';
     for (const p of items) {
-      p.a += p.va * dt;
-      p.x += (p.vx + Math.sin(t / 1400 + p.ph) * 12) * dt;
-      p.y += (p.vy + (mode === 'drift' ? Math.cos(t / 1800 + p.ph) * 9 : 0)) * dt;
-      if (mode === 'fall' && p.y > h + 60) fresh(p, false);
-      if (mode === 'drift') {
-        if (p.x < -50) p.x = w + 40; if (p.x > w + 50) p.x = -40;
-        if (p.y < -50) p.y = h + 40; if (p.y > h + 50) p.y = -40;
-      }
-      ctx.save();
-      ctx.globalAlpha = opacity * Math.min(1, p.z + 0.1);
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.a);
-      const d = p.s.width * p.z * (w < 560 ? 0.42 : 0.62);
-      ctx.drawImage(p.s, -d / 2, -d / 2, d, d);
-      ctx.restore();
+      p.y += p.vy * dt;
+      if (p.y < -12) fresh(p, false);
+      const x = p.x + Math.sin(t / 2400 + p.ph) * p.sway;
+      const twinkle = 0.35 + 0.65 * Math.abs(Math.sin(t / 1000 * p.tw + p.ph)) ** 3;
+      const edge = Math.min(1, p.y / (h * 0.25) + 0.15);
+      ctx.globalAlpha = opacity * twinkle * edge;
+      const d = p.r * 5;
+      ctx.drawImage(glint, x - d / 2, p.y - d / 2, d, d);
     }
   };
   raf = requestAnimationFrame(frame);
@@ -166,38 +85,29 @@ function rotateQuotes(el) {
   const timer = setInterval(() => {
     if (!el.isConnected) { clearInterval(timer); return; }
     el.classList.add('qout');
-    setTimeout(() => { i = (i + 1) % QUOTES.length; el.textContent = QUOTES[i]; el.classList.remove('qout'); }, 600);
-  }, 7000);
+    setTimeout(() => { i = (i + 1) % QUOTES.length; el.textContent = QUOTES[i]; el.classList.remove('qout'); }, 900);
+  }, 9000);
 }
 
-function countUp(el) {
-  const end = Number(el.textContent);
-  if (!(end > 0)) return;
-  const start = performance.now();
-  const tick = (t) => {
-    const k = Math.min((t - start) / 900, 1);
-    el.textContent = Math.round(end * (1 - (1 - k) ** 3));
-    if (k < 1 && el.isConnected) requestAnimationFrame(tick);
-  };
-  requestAnimationFrame(tick);
-}
-
-function parallax(mast) {
+/** The banner image drifts with the pointer and a soft light follows it. */
+function pointerLight(mast) {
   if (!mast || !window.matchMedia('(pointer: fine)').matches) return;
   mast.addEventListener('mousemove', (e) => {
     const r = mast.getBoundingClientRect();
-    mast.style.setProperty('--px', `${((e.clientX - r.left) / r.width - 0.5) * -14}px`);
-    mast.style.setProperty('--py', `${((e.clientY - r.top) / r.height - 0.5) * -10}px`);
+    const x = (e.clientX - r.left) / r.width; const y = (e.clientY - r.top) / r.height;
+    mast.style.setProperty('--px', `${(x - 0.5) * -12}px`);
+    mast.style.setProperty('--py', `${(y - 0.5) * -8}px`);
+    mast.style.setProperty('--lx', `${x * 100}%`);
+    mast.style.setProperty('--ly', `${y * 100}%`);
   });
 }
 
 /** Starts the decorations after a page of the public site renders. */
-export function animatePage(root, isFirstHome) {
+export function animatePage(root) {
   rotateQuotes(root.querySelector('.quote'));
   if (calm()) return;
   const small = window.innerWidth < 820;
-  startSpices(root.querySelector('.mast canvas'), { count: small ? 11 : 18, opacity: 0.62 });
-  startSpices(root.querySelector('.welcome-banner canvas'), { count: small ? 5 : 10, opacity: 0.32 });
-  parallax(root.querySelector('.mast'));
-  if (isFirstHome) root.querySelectorAll('.stat b').forEach(countUp);
+  startGold(root.querySelector('.mast canvas'), { count: small ? 34 : 70, opacity: 0.85 });
+  startGold(root.querySelector('.welcome-banner canvas'), { count: small ? 14 : 28, opacity: 0.55, speed: 0.7 });
+  pointerLight(root.querySelector('.mast'));
 }

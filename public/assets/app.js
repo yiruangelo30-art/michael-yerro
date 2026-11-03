@@ -1,6 +1,6 @@
 import * as store from './store.js';
 import { renderSite, hatSvg } from './site.js';
-import { startSpices } from './motion.js';
+import { startGold } from './motion.js';
 import { renderStudio } from './studio.js';
 
 const root = document.getElementById('app');
@@ -19,10 +19,13 @@ function splash() {
   line.className = 'sline';
   const canvas = document.createElement('canvas');
   canvas.className = 'spices';
-  el.append(canvas, hatSvg(), name, line);
+  const sub = document.createElement('div');
+  sub.className = 'ssub';
+  sub.textContent = 'Exclusive Chef';
+  el.append(canvas, hatSvg(), name, line, sub);
   document.body.append(el);
-  startSpices(canvas, { count: 46, mode: 'fall', opacity: 0.8 });
-  setTimeout(() => el.remove(), 2500);
+  startGold(canvas, { count: 120, opacity: 0.9, speed: 1.6 });
+  setTimeout(() => el.remove(), 3400);
 }
 splash();
 let pub = null;

@@ -51,7 +51,7 @@ function dishOfTheDay(dishes) {
   const from = list.length ? list : dishes;
   const day = Math.floor(Date.now() / 864e5);
   const d = from[day % from.length];
-  return h('a', { class: 'feature', href: `#dish-${d.id}` }, h('span', { class: 'feature-pic' }, cover(d, 'feature-img'), h('span', { class: 'steam', 'aria-hidden': 'true' }, h('i'), h('i'), h('i'))),
+  return h('a', { class: 'feature', href: `#dish-${d.id}` }, h('span', { class: 'feature-pic' }, cover(d, 'feature-img')),
     h('span', { class: 'feature-text' }, h('span', { class: 'feature-tag' }, '✦ Dish of the day'), d.sample && h('span', { class: 'sample' }, 'Sample'),
       h('strong', {}, cleanName(d.name)), h('span', { class: 'rule' }), d.story && h('span', { class: 'rstory' }, d.story),
       h('span', { class: 'kv' }, d.course && h('span', {}, d.course), d.cuisine && h('span', {}, d.cuisine))));
@@ -212,6 +212,9 @@ const ICON = {
   chef: '<path d="M7 14a4 4 0 1 1 1.5-7.7A4.5 4.5 0 0 1 17 7a3.6 3.6 0 0 1-.5 7v5h-9.5z"/>',
   mail: '<path d="M3 6h18v12H3z"/><path d="M3 7l9 7 9-7"/>',
   lock: '<path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3"/>',
+  tools: '<path d="M6 3v8M4 3v5a2 2 0 0 0 4 0V3M6 11v10M17 3c-2 2-3 5-3 8h3v10"/>',
+  chart: '<path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/>',
+  link: '<path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/>',
 };
 export const icon = (name) => {
   const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -223,7 +226,7 @@ export const icon = (name) => {
 export const hatSvg = () => {
   const w = document.createElement('span');
   w.className = 'hat';
-  w.innerHTML = '<i class="wisp"></i><i class="wisp"></i><i class="wisp"></i><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 40a13 13 0 1 1 5-25 12 12 0 0 1 20 1 12 12 0 0 1 3 24v12H18z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M18 44h28M26 40v-9M38 40v-9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+  w.innerHTML = '<svg viewBox="0 0 64 64" aria-hidden="true"><path pathLength="1" d="M18 40a13 13 0 1 1 5-25 12 12 0 0 1 20 1 12 12 0 0 1 3 24v12H18z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path pathLength="1" d="M18 44h28M26 40v-9M38 40v-9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
   return w;
 };
 export const profileBlock = (p, tag) => h('div', { class: 'profile' },
@@ -245,7 +248,7 @@ function chrome(pub, route, content) {
       h('div', { class: 'quote' }),
       h('a', { class: 'side-login', href: '#studio' }, icon('lock'), 'Chef login')),
     h('div', { class: 'app-main' },
-      h('header', { class: 'mast' }, h('canvas', { class: 'spices', 'aria-hidden': 'true' }),
+      h('header', { class: 'mast' }, h('canvas', { class: 'spices', 'aria-hidden': 'true' }), h('span', { class: 'sheen', 'aria-hidden': 'true' }),
         h('div', { class: 'mast-text' }, h('div', { class: 'eyebrow' }, 'EXCLUSIVE CHEF  ·  RESTAURANT MANAGER'),
           h('div', { class: 'wordline' }, h('span', { class: 'wordmark' }, 'Chef Michael'), hatSvg()),
           h('p', {}, p.name)),
@@ -267,7 +270,7 @@ export function renderSite(root, pub, route) {
   else if (name === 'contact') page = contactPage(pub);
   else page = home(pub);
   root.replaceChildren(...chrome(pub, route, page));
-  animatePage(root, name === 'home');
+  animatePage(root);
   document.title = name === 'dish' ? `${cleanName(pub.dishes.find((d) => d.id === rest.join('-'))?.name || 'Dish')} | ${pub.profile.name}` : `${pub.profile.name} | Exclusive Chef`;
   window.scrollTo(0, 0);
 }

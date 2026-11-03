@@ -2,7 +2,9 @@
 import { h, clear, money, pct, toast, modal, confirmBox, downloadJson, printNode } from './ui.js';
 import * as store from './store.js';
 import { icon, profileBlock } from './site.js';
-import { UNIT_NAMES, buildCtx, pricing, unitCost, explode, shoppingList, setMenuCalc, UNITS } from './calc.js';
+import { toolsPage } from './tools.js';
+import { linksPage, importPage, sendToOrderEase, salesOf, soldOf } from './links.js';
+import { UNIT_NAMES, buildCtx, pricing, unitCost, explode, shoppingList, setMenuCalc, UNITS, menuEngineering } from './calc.js';
 
 const COURSES = ['Starter', 'Soup', 'Salad', 'Main', 'Dessert', 'Bakery', 'Sauce', 'Drink'];
 const ALLERGENS = ['Gluten', 'Dairy', 'Egg', 'Fish', 'Shellfish', 'Tree nuts', 'Peanuts', 'Sesame', 'Soy', 'Mustard', 'Celery', 'Sulphites'];
@@ -11,7 +13,7 @@ const STATUS = { idea: 'Idea', testing: 'Testing', final: 'Final' };
 const PHOTO_CATS = ['Dishes', 'Events', 'Kitchen', 'Team'];
 const NAV = [
   ['My kitchen', [['studio', 'Overview', 'home'], ['s-recipes', 'Recipes', 'dish'], ['s-lab', 'Recipe lab', 'heart'], ['s-ingredients', 'Ingredients', 'menu']]],
-  ['Tools', [['s-menus', 'Set menus', 'menu'], ['s-costing', 'Costing', 'dish'], ['s-photos', 'Photos', 'photo']]],
+  ['Tools', [['s-tools', 'Kitchen tools', 'tools'], ['s-menus', 'Set menus', 'menu'], ['s-costing', 'Costing', 'chart'], ['s-photos', 'Photos', 'photo'], ['s-links', 'Connected sites', 'link']]],
   ['Account', [['s-profile', 'Profile', 'chef'], ['s-account', 'Settings', 'lock']]],
 ];
 
@@ -236,7 +238,8 @@ function recipeEditor(id) {
     prep.replaceChildren(list.length ? h('div', { class: 'scroll' }, h('table', {},
       h('thead', {}, h('tr', {}, ['Ingredient', 'Needed', 'Buy', 'Cost'].map((t) => h('th', {}, t)))),
       h('tbody', {}, list.map((x) => h('tr', {}, h('td', {}, x.name), h('td', {}, x.use.join(' ')), h('td', {}, `${x.buy.join(' ')}`, h('small', {}, ` ${x.packs} × ${x.packLabel}`)), h('td', { class: 'num' }, money2(x.cost))))),
-      h('tfoot', {}, h('tr', {}, h('td', { colspan: 3 }, `Food cost for ${guests}`), h('td', { class: 'num' }, money2(list.reduce((a, x) => a + x.cost, 0))))))) : h('p', { class: 'muted' }, 'Add ingredients to build a prep list.'));
+      h('tfoot', {}, h('tr', {}, h('td', { colspan: 3 }, `Food cost for ${guests}`), h('td', { class: 'num' }, money2(list.reduce((a, x) => a + x.cost, 0))))))) : h('p', { class: 'muted' }, 'Add ingredients to build a prep list.'),
+    ...(list.length ? [h('button', { class: 'btn ghost', onclick: () => sendToOrderEase(list) }, 'Send to OrderEase')] : []));
   };
 
   const resolve = (line, name) => {
@@ -501,7 +504,8 @@ function menuEditor(id) {
     m.courses.forEach((co) => { const r = c.rec.get(co.recipeId); if (r) explode(r, x.guests / (Number(r.servings) || 1), c, map); });
     const list = shoppingList(map);
     prep.replaceChildren(list.length ? h('div', { class: 'scroll' }, h('table', {}, h('thead', {}, h('tr', {}, ['Ingredient', 'Buy', 'Packs', 'Supplier'].map((t) => h('th', {}, t)))),
-      h('tbody', {}, list.map((l) => h('tr', {}, h('td', {}, l.name), h('td', {}, l.buy.join(' ')), h('td', {}, `${l.packs} × ${l.packLabel}`), h('td', {}, l.supplier)))))) : h('p', { class: 'muted' }, 'Add courses to build the shopping list.'));
+      h('tbody', {}, list.map((l) => h('tr', {}, h('td', {}, l.name), h('td', {}, l.buy.join(' ')), h('td', {}, `${l.packs} × ${l.packLabel}`), h('td', {}, l.supplier)))))) : h('p', { class: 'muted' }, 'Add courses to build the shopping list.'),
+    ...(list.length ? [h('button', { class: 'btn ghost', onclick: () => sendToOrderEase(list) }, 'Send to OrderEase')] : []));
   };
   const paint = () => {
     cBox.replaceChildren(...m.courses.map((co, i) => h('div', { class: 'cols3 course' },
@@ -538,25 +542,46 @@ function costing() {
   const c = ctx(); const $ = (n) => money(n, c.s.currency);
   const rows = D().recipe.filter((r) => r.kind !== 'base').map((r) => ({ r, p: pricing(r, c) }));
   const box = h('div', {});
-  const cols = [['name', 'Dish'], ['cost', 'Cost'], ['price', 'Price'], ['fc', 'Food cost'], ['gp', 'Gross profit'], ['suggested', 'Suggested']];
-  const val = (x, k) => (k === 'name' ? short(x.r).toLowerCase() : x.p[k]);
+  const sales = salesOf(D());
+  const cols = [['name', 'Dish'], ['sold', 'Sold'], ['cost', 'Cost'], ['price', 'Price'], ['fc', 'Food cost'], ['gp', 'Gross profit'], ['suggested', 'Suggested']];
+  rows.forEach((x) => { const s = soldOf(x.r, sales); x.sold = s.qty; x.linked = s.linked; });
+  const matrix = h('div', {});
+  const paintMatrix = () => {
+    const m = menuEngineering(rows.filter((x) => x.p.price).map((x) => ({ id: x.r.id, name: short(x.r), sold: x.sold, gp: x.p.gp })));
+    const groups = [
+      ['star', 'Stars', 'Popular and profitable. Keep them, and protect the quality.', 'good'],
+      ['workhorse', 'Workhorses', 'Popular but lower profit. Raise the price a little or reduce the cost.', 'warn'],
+      ['puzzle', 'Puzzles', 'Profitable but few sell. Promote them or improve the menu position.', 'warn'],
+      ['dog', 'Dogs', 'Low sales and low profit. Rework or remove them.', 'bad'],
+    ];
+    matrix.replaceChildren(m.rows.length ? h('div', { class: 'quad' }, groups.map(([k, title, text, tone]) => h('section', { class: `panel stack q-${tone}` }, h('h3', {}, title), h('p', { class: 'muted' }, text),
+      h('ul', { class: 'lines' }, m.rows.filter((r) => r.group === k).map((r) => h('li', {}, h('a', { href: `#s-recipe-${r.id}` }, r.name), h('span', { class: 'mini' }, `${r.sold} sold`))))))) : h('p', { class: 'muted' }, 'Enter how many of each dish sold, or bring sales in from the stock site.'));
+  };
+  const val = (x, k) => (k === 'name' ? short(x.r).toLowerCase() : k === 'sold' ? x.sold : x.p[k]);
   const paint = () => {
     const s = [...rows].sort((a, b) => { const x = val(a, sortBy.key); const y = val(b, sortBy.key); return (x > y ? 1 : x < y ? -1 : 0) * sortBy.dir; });
     box.replaceChildren(h('table', {},
       h('thead', {}, h('tr', {}, cols.map(([k, t]) => h('th', { 'aria-sort': sortBy.key === k ? (sortBy.dir > 0 ? 'ascending' : 'descending') : null }, h('button', { class: 'th', onclick: () => { sortBy = { key: k, dir: sortBy.key === k ? -sortBy.dir : 1 }; paint(); } }, t, sortBy.key === k ? (sortBy.dir > 0 ? ' ↑' : ' ↓') : ''))))),
       h('tbody', {}, s.map(({ r, p }) => h('tr', {},
-        h('td', {}, h('a', { href: `#s-recipe-${r.id}` }, short(r))), h('td', { class: 'num' }, $(p.cost)),
+        h('td', {}, h('a', { href: `#s-recipe-${r.id}` }, short(r))),
+        h('td', { class: 'num' }, rows.find((x) => x.r === r).linked ? rows.find((x) => x.r === r).sold : h('input', {
+          class: 'sold', type: 'number', min: 0, inputmode: 'numeric', 'aria-label': `Sold, ${short(r)}`, value: r.sold || '',
+          onchange: async (e) => { const row = rows.find((x) => x.r === r); row.r.sold = Number(e.target.value) || 0; row.sold = row.r.sold; paintMatrix(); await guard(() => store.put('recipe', row.r)); },
+        })),
+        h('td', { class: 'num' }, $(p.cost)),
         h('td', { class: 'num' }, p.price ? $(p.price) : 'Not set'),
         h('td', { class: 'num' }, p.price ? pill(pct(p.fc), p.over ? 'bad' : 'good') : ''),
         h('td', { class: 'num' }, p.price ? $(p.gp) : ''), h('td', { class: 'num' }, p.cost ? $(p.suggested) : ''))))));
   };
   paint();
+  paintMatrix();
   const priced = rows.filter((x) => x.p.price);
   const avg = priced.length ? priced.reduce((a, x) => a + x.p.fc, 0) / priced.length : 0;
   return h('div', {}, h('h1', {}, 'Costing'),
     h('div', { class: 'stats' }, [['Average food cost', pct(avg)], ['Target', `${c.s.targetFc}%`], ['Above target', priced.filter((x) => x.p.over).length], ['No price yet', rows.length - priced.length]].map(([a, b]) => h('div', {}, h('strong', {}, b), h('span', {}, a)))),
     h('div', { class: 'scroll panel flush' }, box),
-    h('p', { class: 'muted' }, `Costs include the ${c.s.qFactor}% allowance for oil, seasoning and garnish. Menu prices ${c.s.pricesIncludeVat ? `include ${c.s.vatPct}% VAT, which is removed before food cost is worked out` : 'exclude VAT'}. Change these in Account.`));
+    h('h2', { class: 'sub' }, 'Menu engineering'), h('p', { class: 'muted' }, 'Sorts dishes by how well they sell and how much each one earns.'), matrix,
+    h('p', { class: 'muted cost-note' }, `Costs include the ${c.s.qFactor}% allowance for oil, seasoning and garnish. Menu prices ${c.s.pricesIncludeVat ? `include ${c.s.vatPct}% VAT, which is removed before food cost is worked out` : 'exclude VAT'}. Change these in Settings.`));
 }
 
 /* ---------- Photos ---------- */
@@ -736,10 +761,14 @@ export async function renderStudio(root, route) {
   try { await store.loadStudio(); }
   catch (e) { if (e.status === 401) { authed = false; return renderStudio(root, route); } clear(root).append(h('main', { class: 'gate' }, h('p', {}, e.message))); return; }
 
-  const [, section, ...rest] = route.split('-');
+  const [bare, query] = route.split('?');
+  const [, section, ...rest] = bare.split('-');
   const id = rest.join('-');
   let page;
-  if (route === 'studio') page = overview();
+  if (bare === 'studio') page = overview();
+  else if (section === 'tools') page = toolsPage(D());
+  else if (section === 'links') page = linksPage(D());
+  else if (section === 'import') page = importPage(D(), query, () => go('s-links'));
   else if (section === 'recipes') page = recipes();
   else if (section === 'recipe') page = recipeEditor(id);
   else if (section === 'lab') page = lab();
@@ -752,7 +781,7 @@ export async function renderStudio(root, route) {
   else if (section === 'account') page = account();
   else page = overview();
 
-  const active = route === 'studio' ? 'studio' : section === 'recipe' ? 's-recipes' : section === 'menu' ? 's-menus' : `s-${section}`;
+  const active = bare === 'studio' ? 'studio' : section === 'recipe' ? 's-recipes' : section === 'menu' ? 's-menus' : section === 'import' ? 's-links' : `s-${section}`;
   clear(root).append(h('div', { class: 'layout' },
     h('aside', { class: 'app-side' }, profileBlock(D().profile[0] || {}, 'Chef Studio'),
       h('nav', { class: 'navlist', 'aria-label': 'Studio' }, NAV.map(([g, items]) => [h('div', { class: 'navlabel' }, g),
